@@ -1,0 +1,39 @@
+{
+  "$comment": "Placeholder feed for status.corevalley.ai. A monitor rewrites this file; the page fetches it on load. Statuses: operational | degraded | down | maintenance | unknown. history: newest first, one entry per day, up to 90. Times are ISO 8601 (UTC).",
+  "updatedAt": null,
+  "overall": "unknown",
+  "groups": [
+    {
+      "name": "Customer surfaces",
+      "components": [
+        { "id": "website", "name": "Website", "note": "corevalley.ai", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "console", "name": "Customer console", "note": "corevalley.ai/portal", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "docs", "name": "Documentation", "note": "docs.corevalley.ai", "status": "unknown", "uptime90": null, "history": [] }
+      ]
+    },
+    {
+      "name": "Platform · np-ktm-1",
+      "components": [
+        { "id": "api", "name": "Control-plane API", "note": "api · auth · metering", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "pods", "name": "GPU pods", "note": "h100 · h200 · mig · hami", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "jupyter", "name": "JupyterHub", "note": "managed notebooks", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "endpoints", "name": "Model endpoints", "note": "openai-compatible inference", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "storage", "name": "Object & block storage", "note": "volumes · datasets · checkpoints", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "network", "name": "Tenant networking", "note": "vcluster · cilium policy", "status": "unknown", "uptime90": null, "history": [] }
+      ]
+    },
+    {
+      "name": "Business",
+      "components": [
+        { "id": "billing", "name": "Billing & payments", "note": "esewa · khalti · invoices", "status": "unknown", "uptime90": null, "history": [] }
+      ]
+    }
+  ],
+  "metrics": [
+    { "id": "api-latency", "name": "API response time", "unit": "ms", "series": { "24h": [], "7d": [], "30d": [] } },
+    { "id": "site-latency", "name": "Website response time", "unit": "ms", "series": { "24h": [], "7d": [], "30d": [] } },
+    { "id": "endpoint-ttft", "name": "Endpoint time to first token", "unit": "ms", "series": { "24h": [], "7d": [], "30d": [] } }
+  ],
+  "maintenance": [],
+  "incidents": []
+}

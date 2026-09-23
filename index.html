@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoreValley System Status</title>
+<meta name="description" content="Live status of the CoreValley GPU cloud: website, console, control-plane API, GPU pods in Kathmandu, JupyterHub, model endpoints, storage and billing. Uptime history and incident reports.">
+<link rel="canonical" href="https://status.corevalley.ai/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#05080D">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CoreValley Status">
+<meta property="og:title" content="CoreValley System Status">
+<meta property="og:description" content="Uptime, incidents and maintenance for the CoreValley GPU cloud in Kathmandu.">
+<meta property="og:url" content="https://status.corevalley.ai/">
+<link rel="icon" href="brand/cv-brandmark.svg" type="image/svg+xml">
+<link rel="alternate" type="application/rss+xml" title="CoreValley incident feed" href="feed.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!--
+  CoreValley status page — a self-contained static page.
+
+  HOSTING   Upload this folder (index.html, status.json, brand/) to the
+            status host, e.g. status.corevalley.ai. No build step, no server.
+  DATA      The page renders from the STATUS object at the bottom of this
+            file. If a status.json sits beside it, that file is fetched and
+            used instead, so a monitor can update the page by rewriting one
+            JSON file (see README.md in this folder for the schema and for
+            wiring UptimeRobot / Better Stack / a GitHub Action).
+  THEME     Follows the OS colour scheme; brand tokens from the design system.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #05080D; --bg-2: #080C13; --card: #0B0F17; --raised: #11161F; --hover: #181E29;
+    --ink: #E8ECEF; --ink-2: #9AA2AD; --mute: #6B7280; --faint: #333944;
+    --line: rgba(232,236,239,.12); --line-subtle: rgba(232,236,239,.07);
+    --hydro: #4ADE80; --hydro-dark: #16A34A; --hydro-glow: rgba(74,222,128,.35);
+    --warning: #FBBF24; --danger: #F87171; --info: #38BDF8;
+    --shadow: 0 12px 40px rgba(0,0,0,.6);
+    --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg: #F3F5F7; --bg-2: #EAEEF2; --card: #FBFCFD; --raised: #FFFFFF; --hover: #E6EAEF;
+      --ink: #161C26; --ink-2: #4B5563; --mute: #5B6472; --faint: #C5CBD3;
+      --line: rgba(11,15,23,.13); --line-subtle: rgba(11,15,23,.08);
+      --hydro: #15803D; --hydro-dark: #166534; --hydro-glow: rgba(21,128,61,.25);
+      --warning: #B45309; --danger: #DC2626; --info: #0369A1;
+      --shadow: 0 12px 40px rgba(15,23,42,.14);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 300 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: var(--hydro); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  .label { font: 500 11px/1.4 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+  .mono { font-family: var(--mono); }
+  .nums { font-variant-numeric: tabular-nums; }
+
+  header { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--line-subtle); background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .bar { display: flex; align-items: center; gap: 14px; height: 64px; }
+  .brand { display: inline-flex; align-items: center; gap: 12px; color: inherit; }
+  .brand:hover { text-decoration: none; }
+  .brand img { display: block; height: 30px; width: auto; }
+  .brand .word { font: 500 17px/1 var(--mono); text-transform: lowercase; letter-spacing: -.01em; }
+  .brand .tag { font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); padding-left: 12px; border-left: 1px solid var(--line); margin-left: 2px; }
+  .bar nav { margin-left: auto; display: flex; gap: 22px; font-size: 13.5px; font-weight: 500; }
+  .bar nav a { color: var(--ink-2); }
+  .bar nav a:hover { color: var(--ink); text-decoration: none; }
+
+  .hero { padding: 48px 0 8px; }
+  .overall { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 22px 26px; border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(177deg, rgba(255,255,255,.045), rgba(255,255,255,0) 60%), var(--card); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), var(--shadow); }
+  .overall h1 { margin: 0; font-size: clamp(1.35rem, 2.6vw, 1.75rem); font-weight: 600; letter-spacing: -.02em; line-height: 1.15; }
+  .overall p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+  .dot { width: 14px; height: 14px; border-radius: 999px; background: var(--hydro); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hydro) 18%, transparent), 0 0 18px var(--hydro-glow); }
+  .dot[data-s="degraded"] { background: var(--warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning) 18%, transparent); }
+  .dot[data-s="partial"], .dot[data-s="major"] { background: var(--danger); box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 18%, transparent); }
+  .dot[data-s="maintenance"] { background: var(--info); box-shadow: 0 0 0 4px color-mix(in srgb, var(--info) 18%, transparent); }
+  .dot[data-s="unknown"] { background: var(--faint); box-shadow: none; }
+  .stamp { text-align: right; font: 400 12px/1.6 var(--mono); color: var(--mute); white-space: nowrap; }
+  .stamp b { display: block; color: var(--ink-2); font-weight: 500; }
+  @media (max-width: 640px) { .overall { grid-template-columns: auto 1fr; } .stamp { grid-column: 1 / -1; text-align: left; } }
+
+  section { padding: 40px 0 0; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+  .sec-head h2 { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: -.01em; }
+  .sec-head .label { margin: 0; }
+  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); overflow: hidden; }
+  .group { padding: 12px 22px 6px; border-top: 1px solid var(--line-subtle); }
+  .group:first-child { border-top: 0; }
+  .comp { display: grid; grid-template-columns: minmax(180px, 1.1fr) 3fr auto; gap: 18px; align-items: center; padding: 14px 22px; border-top: 1px solid var(--line-subtle); }
+  .comp .name { font-weight: 500; font-size: 14px; }
+  .comp .name small { display: block; font: 400 11.5px/1.5 var(--mono); color: var(--mute); }
+  .bars { display: grid; grid-template-columns: repeat(90, 1fr); gap: 2px; height: 30px; }
+  .bars i { display: block; border-radius: 2px; background: var(--hydro); opacity: .85; }
+  .bars i[data-s="degraded"] { background: var(--warning); }
+  .bars i[data-s="down"] { background: var(--danger); }
+  .bars i[data-s="maintenance"] { background: var(--info); }
+  .bars i[data-s="none"] { background: var(--faint); opacity: .45; }
+  .bars i:hover { opacity: 1; outline: 1px solid var(--ink); }
+  .pct { text-align: right; min-width: 92px; }
+  .pct b { display: block; font: 500 15px/1.2 var(--mono); }
+  .pct span { font: 400 11px/1.4 var(--mono); color: var(--mute); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--hydro); }
+  .pill[data-s="degraded"]::before { background: var(--warning); }
+  .pill[data-s="down"]::before { background: var(--danger); }
+  .pill[data-s="maintenance"]::before { background: var(--info); }
+  .pill[data-s="unknown"]::before { background: var(--faint); }
+  .axis { display: flex; justify-content: space-between; padding: 8px 22px 12px; font: 400 11px/1.4 var(--mono); color: var(--mute); }
+  @media (max-width: 720px) { .comp { grid-template-columns: 1fr auto; } .comp .bars { grid-column: 1 / -1; } }
+
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .metrics { grid-template-columns: 1fr; } }
+  .metric { padding: 18px 20px 14px; }
+  .metric .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+  .metric .top b { font-weight: 500; font-size: 14px; }
+  .metric .top span { font: 400 11.5px/1.4 var(--mono); color: var(--mute); }
+  .chart { position: relative; height: 120px; border-radius: 8px; border: 1px dashed var(--line); background: repeating-linear-gradient(to top, var(--line-subtle) 0 1px, transparent 1px 30px); }
+  .chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .chart .empty { position: absolute; inset: 0; display: grid; place-items: center; font: 400 11.5px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+  .metric .foot { display: flex; justify-content: space-between; margin-top: 8px; font: 400 11px/1.4 var(--mono); color: var(--mute); }
+  .range { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; }
+  .range button { appearance: none; border: 0; background: transparent; color: var(--ink-2); font: 500 11px/1 var(--mono); letter-spacing: .06em; padding: 6px 9px; border-radius: 6px; cursor: pointer; }
+  .range button[aria-pressed="true"] { background: var(--raised); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+
+  .empty-state { padding: 28px 22px; text-align: center; color: var(--ink-2); font-size: 14px; }
+  .empty-state b { display: block; color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+  .incident { padding: 18px 22px; border-top: 1px solid var(--line-subtle); }
+  .incident:first-child { border-top: 0; }
+  .incident h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .incident .meta { font: 400 11.5px/1.6 var(--mono); color: var(--mute); }
+  .incident ol { list-style: none; margin: 12px 0 0; padding: 0; border-left: 2px solid var(--line); }
+  .incident li { padding: 4px 0 4px 14px; font-size: 13.5px; }
+  .incident li b { font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--hydro); margin-right: 8px; }
+  .incident li time { font: 400 11px/1 var(--mono); color: var(--mute); margin-left: 8px; }
+
+  .subscribe { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; padding: 26px; }
+  @media (max-width: 720px) { .subscribe { grid-template-columns: 1fr; } }
+  .subscribe h2 { margin: 0 0 6px; font-size: 1.05rem; font-weight: 600; }
+  .subscribe p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  form.sub { display: flex; gap: 8px; align-self: center; }
+  form.sub input { flex: 1; height: 40px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--hover); color: var(--ink); font: 400 14px var(--font); }
+  form.sub input:focus { outline: 2px solid var(--hydro); outline-offset: 2px; }
+  form.sub button { height: 40px; padding: 0 16px; border-radius: 6px; border: 0; background: var(--hydro); color: #05080D; font: 600 13px var(--font); cursor: pointer; }
+  @media (prefers-color-scheme: light) { form.sub button { color: #fff; } }
+  .links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font: 400 12px/1.4 var(--mono); }
+  .links a { color: var(--ink-2); }
+  .links a[aria-disabled="true"] { color: var(--mute); pointer-events: none; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; font: 400 11.5px/1.4 var(--mono); color: var(--mute); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--hydro); }
+  .legend i.w { background: var(--warning); } .legend i.d { background: var(--danger); } .legend i.m { background: var(--info); } .legend i.n { background: var(--faint); }
+
+  footer { margin-top: 56px; padding: 26px 0 40px; border-top: 1px solid var(--line-subtle); font: 400 12px/1.7 var(--mono); color: var(--mute); }
+  footer .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; }
+  footer a { color: var(--mute); } footer a:hover { color: var(--ink); }
+  .note { margin-top: 10px; font-size: 11.5px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="https://corevalley.ai/" aria-label="CoreValley home">
+      <img src="brand/cv-brandmark.svg" alt="">
+      <span class="word">corevalley</span>
+      <span class="tag">status</span>
+    </a>
+    <nav aria-label="Status navigation">
+      <a href="#components">Components</a>
+      <a href="#metrics">Metrics</a>
+      <a href="#maintenance">Maintenance</a>
+      <a href="#incidents">Incidents</a>
+      <a href="https://docs.corevalley.ai/">Docs</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <p class="label">np-ktm-1 · Kathmandu, Nepal</p>
+    <div class="overall" role="status" aria-live="polite" style="margin-top:12px">
+      <span class="dot" id="overall-dot" data-s="unknown" aria-hidden="true"></span>
+      <div>
+        <h1 id="overall-title">Checking status…</h1>
+        <p id="overall-sub">Loading the latest checks.</p>
+      </div>
+      <div class="stamp">
+        <b id="now-npt">—</b>
+        <span id="now-utc">—</span>
+        <span id="refresh">·</span>
+      </div>
+    </div>
+    <noscript><p class="empty-state" style="padding:16px 0">Status data needs JavaScript to render. For the current state, email <a href="mailto:info@corevalley.ai">info@corevalley.ai</a>.</p></noscript>
+  </div>
+
+  <section id="components">
+    <div class="sec-head">
+      <h2>Components</h2>
+      <p class="label">uptime · last 90 days</p>
+    </div>
+    <div class="card" id="components-card"></div>
+    <div class="legend">
+      <span><i></i>Operational</span>
+      <span><i class="w"></i>Degraded</span>
+      <span><i class="d"></i>Outage</span>
+      <span><i class="m"></i>Maintenance</span>
+      <span><i class="n"></i>No data</span>
+    </div>
+  </section>
+
+  <section id="metrics">
+    <div class="sec-head">
+      <h2>Metrics</h2>
+      <div class="range" role="group" aria-label="Time range">
+        <button type="button" aria-pressed="true" data-range="24h">24h</button>
+        <button type="button" aria-pressed="false" data-range="7d">7d</button>
+        <button type="button" aria-pressed="false" data-range="30d">30d</button>
+      </div>
+    </div>
+    <div class="metrics" id="metrics-grid"></div>
+  </section>
+
+  <section id="maintenance">
+    <div class="sec-head">
+      <h2>Scheduled maintenance</h2>
+      <p class="label">announced 72h ahead</p>
+    </div>
+    <div class="card" id="maintenance-card"></div>
+  </section>
+
+  <section id="incidents">
+    <div class="sec-head">
+      <h2>Incident history</h2>
+      <p class="label">past 90 days</p>
+    </div>
+    <div class="card" id="incidents-card"></div>
+  </section>
+
+  <section id="subscribe">
+    <div class="card subscribe">
+      <div>
+        <h2>Get notified</h2>
+        <p>Incident and maintenance notices by email. Until subscriptions go live, the form sends a request to the team and we add you by hand.</p>
+        <div class="links">
+          <a href="feed.xml" aria-disabled="true" title="Coming soon">RSS feed</a>
+          <a href="status.json">JSON feed</a>
+          <a href="https://corevalley.ai/contact/">Contact support</a>
+        </div>
+      </div>
+      <form class="sub" action="mailto:info@corevalley.ai" method="get">
+        <input type="hidden" name="subject" value="Subscribe to CoreValley status updates">
+        <input type="email" name="body" placeholder="you@organisation.com.np" aria-label="Email address" required>
+        <button type="submit">Notify me</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span>© <span id="year"></span> CoreValley AI Pvt. Ltd. · Kathmandu, Nepal</span>
+      <span>
+        <a href="https://corevalley.ai/">corevalley.ai</a> ·
+        <a href="https://docs.corevalley.ai/">Documentation</a> ·
+        <a href="https://corevalley.ai/legal/terms/">Terms</a> ·
+        <a href="mailto:info@corevalley.ai">info@corevalley.ai</a>
+      </span>
+    </div>
+    <p class="note">Times are shown in Nepal Time (UTC+05:45) and UTC. Uptime figures are computed from external checks once monitoring is connected; until then this page shows the component list and no historical data.</p>
+  </div>
+</footer>
+
+<script>
+/* ── Data ──────────────────────────────────────────────────────────────────
+   Placeholder feed. No numbers here are measurements: every component has no
+   history ("none") and the overall state is "unknown" until a monitor writes
+   status.json beside this page. See README.md for the schema. */
+var STATUS = {
+  updatedAt: null,                 // ISO timestamp of the last monitor run
+  overall: "unknown",              // operational | degraded | partial | major | maintenance | unknown
+  groups: [
+    { name: "Customer surfaces", components: [
+      { id: "website",  name: "Website",            note: "corevalley.ai",                  status: "unknown", uptime90: null, history: [] },
+      { id: "console",  name: "Customer console",   note: "corevalley.ai/portal",           status: "unknown", uptime90: null, history: [] },
+      { id: "docs",     name: "Documentation",      note: "docs.corevalley.ai",                status: "unknown", uptime90: null, history: [] }
+    ]},
+    { name: "Platform · np-ktm-1", components: [
+      { id: "api",      name: "Control-plane API",  note: "api · auth · metering",          status: "unknown", uptime90: null, history: [] },
+      { id: "pods",     name: "GPU pods",           note: "h100 · h200 · mig · hami",       status: "unknown", uptime90: null, history: [] },
+      { id: "jupyter",  name: "JupyterHub",         note: "managed notebooks",              status: "unknown", uptime90: null, history: [] },
+      { id: "endpoints",name: "Model endpoints",    note: "openai-compatible inference",    status: "unknown", uptime90: null, history: [] },
+      { id: "storage",  name: "Object & block storage", note: "volumes · datasets · checkpoints", status: "unknown", uptime90: null, history: [] },
+      { id: "network",  name: "Tenant networking",  note: "vcluster · cilium policy",       status: "unknown", uptime90: null, history: [] }
+    ]},
+    { name: "Business", components: [
+      { id: "billing",  name: "Billing & payments", note: "esewa · khalti · invoices",      status: "unknown", uptime90: null, history: [] }
+    ]}
+  ],
+  metrics: [
+    { id: "api-latency",  name: "API response time",      unit: "ms", series: { "24h": [], "7d": [], "30d": [] } },
+    { id: "site-latency", name: "Website response time",  unit: "ms", series: { "24h": [], "7d": [], "30d": [] } },
+    { id: "endpoint-ttft",name: "Endpoint time to first token", unit: "ms", series: { "24h": [], "7d": [], "30d": [] } }
+  ],
+  maintenance: [],   // { title, components:[ids], start, end, note }
+  incidents: []      // { title, status, components:[ids], updates:[{state,time,text}] }
+};
+
+/* ── Render ──────────────────────────────────────────────────────────────── */
+var OVERALL = {
+  operational: ["All systems operational", "Every monitored component is responding normally."],
+  degraded:    ["Degraded performance", "One or more components are slower than usual. Details below."],
+  partial:     ["Partial outage", "Some components are unavailable. Details below."],
+  major:       ["Major outage", "Core services are unavailable. We are working on it."],
+  maintenance: ["Scheduled maintenance in progress", "Planned work is under way; affected components are listed below."],
+  unknown:     ["Monitoring not yet connected", "Components are listed; uptime and response-time data will appear once external checks are wired in."]
+};
+var PILL = { operational: "operational", degraded: "degraded", down: "outage", maintenance: "maintenance", unknown: "no data" };
+
+function el(tag, attrs, children) {
+  var n = document.createElement(tag);
+  if (attrs) for (var k in attrs) { if (k === "text") n.textContent = attrs[k]; else if (k === "html") n.innerHTML = attrs[k]; else n.setAttribute(k, attrs[k]); }
+  (children || []).forEach(function (c) { if (c) n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return n;
+}
+function fmt(date, tz) {
+  try { return new Intl.DateTimeFormat("en-GB", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }).format(date); } catch (e) { return date.toISOString(); }
+}
+function dayLabel(offset) {
+  var d = new Date(); d.setDate(d.getDate() - offset);
+  return d.toISOString().slice(0, 10);
+}
+
+function render(data) {
+  var o = OVERALL[data.overall] || OVERALL.unknown;
+  document.getElementById("overall-dot").setAttribute("data-s", data.overall);
+  document.getElementById("overall-title").textContent = o[0];
+  document.getElementById("overall-sub").textContent = o[1];
+
+  var comps = document.getElementById("components-card"); comps.innerHTML = "";
+  data.groups.forEach(function (g) {
+    comps.appendChild(el("div", { class: "group" }, [el("p", { class: "label", text: g.name })]));
+    g.components.forEach(function (c) {
+      var bars = el("div", { class: "bars", role: "img", "aria-label": "90-day history for " + c.name });
+      for (var i = 89; i >= 0; i--) {
+        var day = (c.history || [])[i];
+        var s = day && day.status ? day.status : "none";
+        var t = dayLabel(i) + " · " + (s === "none" ? "no data" : PILL[s] || s);
+        bars.appendChild(el("i", { "data-s": s, title: t }));
+      }
+      var pct = c.uptime90 == null ? "—" : c.uptime90.toFixed(2) + "%";
+      comps.appendChild(el("div", { class: "comp" }, [
+        el("div", { class: "name" }, [c.name, el("small", { text: c.note || "" })]),
+        bars,
+        el("div", { class: "pct" }, [
+          el("b", { class: "nums", text: pct }),
+          el("span", { class: "pill", "data-s": c.status || "unknown", text: PILL[c.status] || "no data" })
+        ])
+      ]));
+    });
+  });
+  comps.appendChild(el("div", { class: "axis" }, [el("span", { text: "90 days ago" }), el("span", { text: "today" })]));
+
+  renderMetrics(data, currentRange);
+
+  var m = document.getElementById("maintenance-card"); m.innerHTML = "";
+  if (!data.maintenance.length) {
+    m.appendChild(el("div", { class: "empty-state" }, [el("b", { text: "No maintenance scheduled" }), "Planned work is announced here and by email at least 72 hours ahead, with the affected components and window in Nepal Time."]));
+  } else data.maintenance.forEach(function (w) {
+    m.appendChild(el("div", { class: "incident" }, [
+      el("h3", { text: w.title }),
+      el("p", { class: "meta", text: fmt(new Date(w.start), "Asia/Kathmandu") + " → " + fmt(new Date(w.end), "Asia/Kathmandu") + " NPT · " + (w.components || []).join(", ") }),
+      w.note ? el("p", { text: w.note }) : null
+    ]));
+  });
+
+  var inc = document.getElementById("incidents-card"); inc.innerHTML = "";
+  if (!data.incidents.length) {
+    inc.appendChild(el("div", { class: "empty-state" }, [el("b", { text: "No incidents reported" }), "When monitoring is connected, incidents appear here with a timeline: investigating → identified → monitoring → resolved."]));
+  } else data.incidents.forEach(function (x) {
+    inc.appendChild(el("div", { class: "incident" }, [
+      el("h3", { text: x.title }),
+      el("p", { class: "meta", text: (x.status || "").toUpperCase() + " · " + (x.components || []).join(", ") }),
+      el("ol", null, (x.updates || []).map(function (u) {
+        return el("li", null, [el("b", { text: u.state }), u.text, el("time", { datetime: u.time, text: fmt(new Date(u.time), "Asia/Kathmandu") + " NPT" })]);
+      }))
+    ]));
+  });
+
+  var stampNpt = document.getElementById("now-npt"), stampUtc = document.getElementById("now-utc");
+  if (data.updatedAt) {
+    var d = new Date(data.updatedAt);
+    stampNpt.textContent = "Updated " + fmt(d, "Asia/Kathmandu") + " NPT";
+    stampUtc.textContent = fmt(d, "UTC") + " UTC";
+  } else {
+    stampNpt.textContent = "No monitor data yet";
+    stampUtc.textContent = fmt(new Date(), "Asia/Kathmandu") + " NPT";
+  }
+}
+
+var currentRange = "24h";
+function renderMetrics(data, range) {
+  var grid = document.getElementById("metrics-grid"); grid.innerHTML = "";
+  data.metrics.forEach(function (mt) {
+    var pts = (mt.series && mt.series[range]) || [];
+    var chart = el("div", { class: "chart" });
+    if (pts.length > 1) {
+      var max = Math.max.apply(null, pts.map(function (p) { return p.v; })) || 1;
+      var d = pts.map(function (p, i) { var x = (i / (pts.length - 1)) * 100, y = 100 - (p.v / max) * 88; return (i ? "L" : "M") + x.toFixed(2) + " " + y.toFixed(2); }).join(" ");
+      chart.appendChild(el("svg", { viewBox: "0 0 100 100", preserveAspectRatio: "none", html:
+        '<path d="' + d + ' L100 100 L0 100 Z" fill="var(--hydro)" opacity=".12"/><path d="' + d + '" fill="none" stroke="var(--hydro)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>' }));
+    } else {
+      chart.appendChild(el("div", { class: "empty", text: "Awaiting data · " + range }));
+    }
+    var last = pts.length ? pts[pts.length - 1].v + " " + mt.unit : "—";
+    var avg = pts.length ? Math.round(pts.reduce(function (a, p) { return a + p.v; }, 0) / pts.length) + " " + mt.unit : "—";
+    grid.appendChild(el("div", { class: "card metric" }, [
+      el("div", { class: "top" }, [el("b", { text: mt.name }), el("span", { class: "nums", text: "now " + last })]),
+      chart,
+      el("div", { class: "foot" }, [el("span", { text: range + " · avg " + avg }), el("span", { text: "p95 —" })])
+    ]));
+  });
+}
+
+document.querySelectorAll(".range button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    currentRange = b.getAttribute("data-range");
+    document.querySelectorAll(".range button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    renderMetrics(LIVE, currentRange);
+  });
+});
+
+document.getElementById("year").textContent = new Date().getUTCFullYear();
+
+var LIVE = STATUS;
+render(LIVE);
+
+/* status.json beside the page overrides the inline placeholder. Fails
+   quietly (file: URLs, missing file, offline) and keeps the placeholder. */
+fetch("status.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (json) {
+  if (json && json.groups) { LIVE = json; render(LIVE); }
+}).catch(function () {});
+
+/* Re-render the clock once a minute so a page left open stays honest. */
+setInterval(function () {
+  if (!LIVE.updatedAt) document.getElementById("now-utc").textContent = fmt(new Date(), "Asia/Kathmandu") + " NPT";
+}, 60000);
+</script>
+</body>
+</html>
