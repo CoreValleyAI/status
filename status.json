@@ -15,7 +15,7 @@
       "name": "Platform · np-ktm-1",
       "components": [
         { "id": "api", "name": "Control-plane API", "note": "api · auth · metering", "status": "unknown", "uptime90": null, "history": [] },
-        { "id": "pods", "name": "GPU pods", "note": "h100 · h200 · mig · hami", "status": "unknown", "uptime90": null, "history": [] },
+        { "id": "pods", "name": "GPU pods", "note": "h200 · mig · hami", "status": "unknown", "uptime90": null, "history": [] },
         { "id": "jupyter", "name": "JupyterHub", "note": "managed notebooks", "status": "unknown", "uptime90": null, "history": [] },
         { "id": "endpoints", "name": "Model endpoints", "note": "openai-compatible inference", "status": "unknown", "uptime90": null, "history": [] },
         { "id": "storage", "name": "Object & block storage", "note": "volumes · datasets · checkpoints", "status": "unknown", "uptime90": null, "history": [] },
