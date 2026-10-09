@@ -17,9 +17,7 @@
 <meta property="og:description" content="Uptime, incidents and maintenance for the CoreValley GPU cloud in Kathmandu.">
 <meta property="og:url" content="https://status.corevalley.ai/">
 <link rel="icon" href="brand/cv-brandmark.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <!--
   CoreValley status page — a self-contained static page.
 
@@ -34,6 +32,10 @@
             theme and remembers it (localStorage "cv-theme").
 -->
 <style>
+  /* Brand faces, self-hosted (Latin subset, variable weight; SIL Open Font
+     License) so visiting the page sends nothing to a third party. */
+  @font-face { font-family: "Manrope"; font-style: normal; font-weight: 200 800; font-display: swap; src: url("fonts/manrope-latin.woff2") format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 100 800; font-display: swap; src: url("fonts/jetbrains-mono-latin.woff2") format("woff2"); }
   /* Light by default; dark (true black, OLED, with neutral greys rather than
      the blue-tinted carbon) when chosen with the header switch. */
   :root {
